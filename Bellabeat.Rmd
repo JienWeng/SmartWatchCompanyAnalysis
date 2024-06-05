@@ -1,0 +1,725 @@
+---
+title: "Bellabeat Analysis"
+author: "Lai Jien Weng"
+date: "2024-05-28"
+output: 
+  html_document:
+    theme: united
+    highlight: tango
+    toc: true
+    toc_float: true
+---
+
+# Import necessary libraries
+
+```{r import libraries, echo=FALSE, results='hide'}
+library(tidyverse)
+library(janitor)
+library(skimr)
+library(reshape2)
+library(RColorBrewer)
+palette <- brewer.pal(n = 7, name = "Set3")
+```
+
+## Import csv files
+
+Then, we import needed csv files accordingly. To improve the readability, we hide the code and output. 
+
+```{r March (3) - April (4), include=FALSE, results='hide'}
+Activity_3_4 <- read_csv('./3-4/dailyActivity_merged.csv')
+Heartrate_seconds_3_4 <- read_csv('./3-4/heartrate_seconds_merged.csv')
+WeightLogInfo_3_4 <- read_csv('./3-4/weightLogInfo_merged.csv')
+```
+
+```{r April (4) - May (5), include=FALSE, results='hide'}
+Activity_4_5 <- read_csv('./4-5/dailyActivity_merged.csv')
+Heartrate_seconds_4_5 <- read_csv('./4-5/heartrate_seconds_merged.csv')
+WeightLogInfo_4_5 <- read_csv('./4-5/weightLogInfo_merged.csv')
+```
+
+```{r Exclusive data on April - May, include=FALSE, results='hide'}
+Calories_4_5 <- read_csv('./4-5/dailyCalories_merged.csv')
+Intensities_4_5 <- read_csv('./4-5/dailyIntensities_merged.csv')
+Steps_4_5 <- read_csv('./4-5/dailySteps_merged.csv')
+SleepDay_4_5 <- read_csv('./4-5/sleepDay_merged.csv')
+```
+
+------------------------------------------------------------------------
+
+## Data Understanding
+
+To further understand the structure of the data, we check the data one by one. Firstly, we check on *`Activity`*.\
+
+```{r Summary of Activity_3_4}
+skim_without_charts(Activity_3_4)
+```
+
+```{r Summary of Activity_4_5}
+skim_without_charts(Activity_4_5)
+```
+
+\
+We observed that there have no any missing values, therefore we do not need to address missing values issue for this dataset. However, we observed that both data sets have different numbers of row. We suspect that they might be prone to inconsistency in data. Therefore, we decided to check the unique number of `Id` in this case.
+
+```{r Unique_number_of_Id}
+n_distinct(Activity_3_4$Id)
+n_distinct(Activity_4_5$Id)
+```
+
+\
+Oh No! The they have different numbers of user information collected in both data set! As mentioned before, the data are collected by 30 user from FitBit, while there are different numbers of user in both of the data. We believe that this problem should have occur in other data as well. Anyway, we should combine the Activity data from March to May for further analysis.\
+
+```{r Combine_dataframe, include=FALSE}
+Activity_3_5 <- rbind(Activity_3_4, Activity_4_5)
+Heartrate_seconds_3_5 <- rbind(Heartrate_seconds_3_4, Heartrate_seconds_4_5)
+WeightLogInfo_3_5 <- rbind(WeightLogInfo_3_4, WeightLogInfo_4_5)
+```
+
+------------------------------------------------------------------------
+
+## Data Cleaning
+
+Then, we check for missing values and duplicated data for every dataframe created to make sure the data is clean and ready to create accurate data analysis:\
+
+```{r Check for missing value, echo=FALSE}
+check_data_quality <- function(df, df_name) {
+  missing_values <- sum(is.na(df))
+  cat("DataFrame:", df_name, "\n")
+  cat("Total missing values:", missing_values, "\n")
+
+  duplicated_rows <- sum(duplicated(df))
+  cat("Total duplicated rows:", duplicated_rows, "\n\n")
+}
+
+df_list <- list(Activity_3_5, Heartrate_seconds_3_5, WeightLogInfo_3_5, Calories_4_5, Intensities_4_5, SleepDay_4_5, Steps_4_5)
+df_names <- c("Activity_3_5", "Heartrate_seconds_3_5", "WeightLogInfo_3_5", "Calories_4_5", "Intensities_4_5", "SleepDay_4_5", "Steps_4_5")
+
+for (i in seq_along(df_list)) {
+  check_data_quality(df_list[[i]], df_names[i])
+}
+```
+
+#### Address missing value
+
+We observe that there's 96 over 100 observations in `WeightLogInfo_3_5` have missing value, it's huge number there! It's crucial to examine the data to understand the nature of these missing values and determine the appropriate action.\
+
+```{r Address WeightLogInfo_3_5 missing values}
+View(WeightLogInfo_3_5)
+```
+
+![*WeightLogInfo_3_5's View for first 8 observations*](WeightLogInfo_3_5.png)
+
+\
+From there, we observe that all the missing values is from the column `Fat`, while other variables do not have any missing values.\
+
+![*FitBit products from 2007 - 2016 (Source: Wikipedia - <https://en.wikipedia.org/wiki/List_of_Fitbit_products>)*](FitBit_products_2007_2016.png)
+
+\
+As per research, we found out that there's no device that can detect fat by FitBit's watch sensor from year 2007 (FitBit's first product launch) - 2016 (The date that data is collected). Therefore, we suspect that this data is collected by FitBit's user self declaration. The reason of missing values in fat might be the FitBit's user are uncomfortable to share their body fat, or they are not accessible to test their body fat. Since there are too many missing values in 'fat' column, plus the reliability of the data is questionable (self-declared by user), we decided to remove the whole column from the `WeightLogInfo_3_5`.\
+
+```{r Remove fat from WeightLogInfo_3_5, echo=FALSE}
+WeightLogInfo_3_5$Fat = NULL
+check_data_quality(WeightLogInfo_3_5, 'WeightLogInfo_3_5')
+```
+
+#### Remove duplicated rows
+
+Hooray! There's no more missing values already! Then, we will remove duplicated data to prevent skewed distribution and bias in data analysis. We observed there are several datasets with duplicated rows, therefore we would remove them accordingly.\
+
+```{r Remove duplicated rows, echo=FALSE}
+for (i in seq_along(df_list)) {
+  df <- df_list[[i]]
+  df <- df[!duplicated(df), ] 
+  check_data_quality(df, df_names[i])
+}
+```
+
+#### Categorize Heart Rate
+
+To analyse the heartbeat per minute (bpm) of the given data, we are interested to gain insight into the heart rate of the users based on different time. By categorizing the dataset into 4 timeline:
+
+-   *00:00 - 06:00 (Midnight)*
+
+-   06:00 - 12:00 (Morning)
+
+-   *12:00 - 18:00 (Noon)*
+
+-   18:00 - 00:00 (Night)
+
+we could capture the pattern of the heart rate of users on different timeline.
+
+```{r Convert time to time interval format}
+# Convert Time column to POSIXct format
+Heartrate_seconds_3_5$Time <- as.POSIXct(Heartrate_seconds_3_5$Time, format = "%m/%d/%Y %I:%M:%S %p")
+
+# Create a new column for time intervals
+Heartrate_seconds_3_5 <- mutate(Heartrate_seconds_3_5,
+                                 Time_Category = case_when(
+                                   hour(Time) >= 0 & hour(Time) < 6 ~ "Midnight",
+                                   hour(Time) >= 6 & hour(Time) < 12 ~ "Morning",
+                                   hour(Time) >= 12 & hour(Time) < 18 ~ "Noon",
+                                   TRUE ~ "Night"  # Catch-all for times between 18:00 and 23:59:59
+                                 )) %>% 
+  mutate(Time_Category = factor(Time_Category, levels = c("Midnight", "Morning", "Noon", "Night")))
+
+head(Heartrate_seconds_3_5)
+```
+
+#### Categorize Sleep Data
+
+We also categorize the sleep data into day of the week. (From Monday - Sunday)
+
+```{r Extract sleep data with day of the week, include=FALSE}
+# Convert SleepDay to Date format
+SleepDay_4_5$SleepDay <- mdy_hms(SleepDay_4_5$SleepDay)
+
+# Extract day of the week (Monday = 1, ..., Sunday = 7)
+SleepDay_4_5$DayOfWeek <- wday(SleepDay_4_5$SleepDay, label = TRUE)
+```
+
+The data is cleaned and well prepared! Let's move on to the analysis part!\
+
+------------------------------------------------------------------------
+
+## Analysis
+
+In analysis phase, we want to gain insights to our dataset, and discover hidden pattern that could answer Bellabeat's business questions.
+
+```{r Summary of dataset, include=FALSE}
+
+print("Activity Segmentation (Distance):")
+Activity_3_5 %>% 
+  select(
+    TotalSteps,
+    TotalDistance,
+    VeryActiveDistance,
+    ModeratelyActiveDistance,,
+    LightActiveDistance,
+    SedentaryActiveDistance,
+    Calories
+  ) %>% 
+  summary()
+
+print("Activity Segmentation (Minutes):")
+Activity_3_5 %>% 
+  select(
+    VeryActiveMinutes,
+    FairlyActiveMinutes,
+    LightlyActiveMinutes,
+    SedentaryMinutes,
+    Calories
+  ) %>% 
+  summary()
+
+print("Heartrate:")
+Heartrate_seconds_3_5 %>% 
+  select(
+    Value,
+    Time_Category
+  ) %>% 
+  summary()
+
+print("BMI:")
+bmi <- WeightLogInfo_3_5 %>% 
+  select(
+    BMI
+  )
+summary(bmi)
+  
+#Average Heartrate per minutes (recorded every 5 minutes)
+average_hpm <- Heartrate_seconds_3_5 %>% 
+  group_by(Time_Category) %>% 
+  summarise(average_hpm = mean(Value))
+print(average_hpm)
+
+# Calculate the ratio of manual reports
+ratio_manual_reports <- WeightLogInfo_3_5 %>%
+  summarise(ratio_manual_reports = mean(IsManualReport))
+
+ratio_non_manual_reports <- 1 - ratio_manual_reports$ratio_manual_reports
+
+ratio_manual_reports <- tibble(ratio_type = c("Manual Reports", "Non-Manual Reports"),
+                          ratio_value = c(ratio_manual_reports$ratio_manual_reports, ratio_non_manual_reports))
+print(ratio_manual_reports)
+
+ggplot(data = ratio_manual_reports, aes(x="", y=ratio_value, fill=ratio_type)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0) +
+  geom_text(aes(label = paste0(round(ratio_value * 100), "%")), position = position_stack(vjust = 0.5)) + 
+  labs(title = "Ratio of Manual vs. Non-Manual Reports") +
+  scale_fill_manual(values = palette) +  
+  theme_minimal()
+
+
+#Ratio of weight reports by user
+user_contribution <- WeightLogInfo_3_5 %>%
+  count(Id) %>%
+  mutate(percentage_contribution = n / sum(n)) %>% 
+  arrange(desc(percentage_contribution))
+print(user_contribution)
+```
+
+```{r Remove unused variables to optimize IDE}
+rm(
+  Activity_3_4,
+  Activity_4_5,
+  Calories_4_5,
+  Heartrate_seconds_3_4,
+  Heartrate_seconds_4_5,
+  df,
+  df_list,
+  Intensities_4_5,
+  Steps_4_5,
+  WeightLogInfo_3_4,
+  WeightLogInfo_4_5
+  )
+```
+
+The source code and output is hidden to improve readability, please refer to .rmd file to inspect source code.
+
+### Activity Segmentation (Distance)
+
+![*Summary of Activity_Segmentation(Distance)*](Activity_Segmentation_Distance.png)
+
+From the summary of Activity Segmentation by Distance, we discovered some interesting pattern:
+
+-   Most users have an average total steps of 7281 daily.
+
+-   Most of the distance recorded are coming from light active distance, which is believe as walking. It is interesting that most of the distance recorded is not by exercising like jogging or running, but walking. This give us insights that the user are not only wearing the fitness-designated watch to exercise, but wearing it most of the scenario.
+
+-   There's big difference between the user habits, which we can observe from the total steps interquartile range (IQR).
+
+### Activity Segmentation (Minutes)
+
+![*Summary of Activity_Segmentation(Minutes)*](Activity_Segmentation_Minutes.png)
+
+```{r Activity heatmap}
+Activity_num <- Activity_3_5 %>% 
+  select(TotalSteps,
+         TotalDistance,
+         VeryActiveDistance,
+         ModeratelyActiveDistance,
+         LightActiveDistance,
+         SedentaryActiveDistance,
+         VeryActiveMinutes,
+         FairlyActiveMinutes,
+         LightlyActiveMinutes,
+         SedentaryMinutes,
+         Calories) %>% 
+  cor() %>% 
+  melt()
+
+p <- ggplot(data = Activity_num) +
+  geom_tile(mapping = aes(x = Var1, y = Var2, fill = value)) +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1, 1), space = "Lab", name="Correlation") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1)) +
+  coord_fixed()
+
+p
+```
+
+From the heatmap, we can see most of the factors are positively correlated, indicating increment in one factor will lead to increment of the paired factor. However, they are certain factor we need to take care about, which is the `SedentaryMinutes` is negatively correlated with almost every other factors. We have to be careful while handling data related to `SedentaryMinutes` .
+
+```{r Activity pie chart}
+# Create the Activity_distance_long data frame
+Activity_distance_long <- Activity_3_5 %>%
+  select(
+    VeryActiveDistance,
+    ModeratelyActiveDistance,
+    LightActiveDistance,
+    SedentaryActiveDistance
+  ) %>%
+  pivot_longer(cols = everything(), names_to = "Type", values_to = "Value") %>%
+  mutate(Type = case_when(
+    Type == "VeryActiveDistance" ~ "VeryActive",
+    Type == "ModeratelyActiveDistance" ~ "FairlyActive",
+    Type == "LightActiveDistance" ~ "LightlyActive",
+    Type == "SedentaryActiveDistance" ~ "Sedentary"
+  ))
+
+# Create the Activity_minutes_long data frame
+Activity_minutes_long <- Activity_3_5 %>%
+  select(
+    VeryActiveMinutes,
+    FairlyActiveMinutes,
+    LightlyActiveMinutes,
+    SedentaryMinutes
+  ) %>%
+  pivot_longer(cols = everything(), names_to = "Type", values_to = "Value") %>%
+  mutate(Type = case_when(
+    Type == "VeryActiveMinutes" ~ "VeryActive",
+    Type == "FairlyActiveMinutes" ~ "FairlyActive",
+    Type == "LightlyActiveMinutes" ~ "LightlyActive",
+    Type == "SedentaryMinutes" ~ "Sedentary"
+  ))
+
+# Create pie charts
+pie_chart <- function(data, title) {
+  ggplot(data, aes(x = "", y = Value, fill = Type)) +
+    geom_bar(width = 1, stat = "identity", position = "fill") +
+    coord_polar(theta = "y") +
+    scale_fill_manual(values = palette) + 
+    labs(title = title, x = "", y = "") +
+    theme_void()
+}
+
+# Display pie charts
+pie_chart(Activity_distance_long, "Activity Distance Distribution")
+pie_chart(Activity_minutes_long, "Activity Minutes Distribution")
+```
+
+There's some valuable insights from this summary:
+
+-   Most of the time recorded is sedentary minutes. One of the way to explain this is most of the users are wearing their watch, spending times sitting in front of their desk and doing office works. This give us an insight to create some feature such as reminder to walk around, which can definitely increase most of users' experience.
+
+-   The users are spending too little times on exercising daily. The median of intense active minutes and moderate active minutes are 2 minutes and 6 minutes respectively. According to WHO (2022), an adult should exercise at least 21-43 minutes per day, which is definitely lower than the recommended time.
+
+### Heart rate
+
+![*Average heartbeat per minutes (bpm) by time category*](average_hpm.png)
+
+By grouping the average heart rate value by time category, we found that:
+
+-   The highest average heart rate occurs during the noon hours. One of the possible factor is users are typically engaged in various activities such as work, physical exercise, or household chores, leading to higher energy expenditure and heart rate elevation during noon. Morning and Night are consider quite close to the Noon hours as well.
+
+-   The lowest average heart rate occurs during the midnight hours. During the late-night hours, individuals are typically in a state of restorative sleep.
+
+```{r Area chart of heartrate}
+# Convert Time to hour of the day
+Heartrate_seconds_3_5$Hour <- as.numeric(format(Heartrate_seconds_3_5$Time, "%H"))
+
+# Calculate the average heart rate for each hour
+average_hr <- aggregate(Value ~ Hour, data = Heartrate_seconds_3_5, FUN = mean)
+
+# Create the plot
+ggplot(average_hr, aes(x = Hour, y = Value, fill = "Average Heart Rate")) +
+  geom_area(alpha = 0.6) + 
+  scale_x_continuous(breaks = seq(1, 23, by = 1)) + 
+  labs(title = "Average Heart Rate Over 24 Hours",
+       x = "Hour of the Day",
+       y = "Average Heart Rate") +
+  scale_fill_manual(values = palette)
+```
+
+From this area graph, we observed that:
+
+1.  **Average heart rate in midnight is relatively low:**
+
+    Most people are sleeping, and the body is in a restful state. Parasympathetic activity is also high during this hour.
+
+2.  **Average heart rate from 3.30pm - 7.00pm is relatively high:**
+
+    People often engage in physical activities or exercise after work or school.
+
+These give us important insights that how users heartbeat normally distributed, and Bellabeat could develop anomalies detection features. For example, Bellabeat could detect a sudden surge or abnormal heart rate, which may indicate dangerous health status. With this feature, Bellabeat can send this report to the nearest hospital to save the user.
+
+### Weight Info
+
+![BMI](BMI.png){width="186"}
+
+According to Harvard Health (2024), it stated that the BMI indicating the following health states:
+
+-   Underweight: BMI \< 18.5
+
+-   Normal weight: BMI = 18.5-24.9
+
+-   Overweight: BMI = 25-29.5
+
+-   Obese: BMI ≥ 30
+
+We found that the average BMI of the FitBit users are overweight (25.37). By this findings, Bellabeat can understand how the customer segmentation based on market looks like and develop targeted marketing.
+
+However, we should also verify the biasness in the data given as well.
+
+![*Ratio of manual weight reports*](ratio_manual_reports_pie.png)
+
+64% of users weights is self reported, which made the reliability of the data questionable.
+
+![*Ratio of distribution to weight dataset*](contribution_weight.png)
+
+We observed that 77% of data are filled by the first 2 users, therefore the data could be highly bias toward these the first 2 users.
+
+Due to the issues arise, we should only take the weight data as brief reference only, and not taking it into consideration. We should collect a fair data which collect data equally from users.
+
+```{r}
+# Plot histogram using ggplot2
+ggplot(bmi, aes(x = BMI)) +
+  geom_histogram(binwidth = 1) + 
+  labs(title = "Histogram of BMI",
+       x = "BMI",
+       y = "Frequency") +
+  scale_fill_manual(values = palette)
+
+```
+
+This is not worth for reference.
+
+### Sleep Data
+
+![Summary of Sleep Data](Sleep.png){width="505"}
+
+From this summary, we discovered that:
+
+-   On the average, the users sleep 1 time for 7 hours a day.
+
+-   They spend average 7.5 hours in bed daily.
+
+#### Average time took to sleep
+
+```{r Analysis of Sleep Data}
+
+# Print Sleep Data Summary
+print("Sleep Data Summary:")
+print(SleepDay_4_5 %>% 
+        select(TotalSleepRecords,
+               TotalMinutesAsleep,
+               TotalTimeInBed
+               ) %>% 
+        summary())
+
+# Sleep Data Contribution
+user_contribution_sleep <- SleepDay_4_5 %>%
+  count(Id) %>%
+  mutate(percentage_contribution_sleep = n / sum(n)) %>% 
+  arrange(desc(percentage_contribution_sleep))
+print("Sleep Data Contribution:")
+print(user_contribution_sleep)
+
+# Average time took to sleep
+average_time_took_to_sleep <- SleepDay_4_5 %>% 
+  group_by(Id) %>% 
+  summarise(average_time_took_to_sleep = mean(TotalTimeInBed - TotalMinutesAsleep)) %>% 
+  arrange(desc(average_time_took_to_sleep))
+
+# Define function to classify sleep patterns
+classify_sleep_pattern <- function(time) {
+  ifelse(time < 20, "Healthy Sleepers",
+         ifelse(time >= 20 & time <= 50, "Prone to Sleep Disorders",
+                "Potential Insomnia"))
+}
+
+# Apply the function to classify each individual
+average_time_took_to_sleep <- average_time_took_to_sleep %>%
+  mutate(sleep_pattern = classify_sleep_pattern(average_time_took_to_sleep))
+
+print(average_time_took_to_sleep)
+
+# Pie Chart of Sleep Patterns
+ggplot(average_time_took_to_sleep, aes(x = "", fill = sleep_pattern)) +
+  geom_bar(width = 1) +
+  coord_polar(theta = "y") +  
+  scale_fill_manual(values = palette) +
+  labs(title = "Distribution of Sleep Patterns") +
+  theme_minimal() +  
+  geom_text(aes(label = scales::percent((..count..)/sum(..count..))), stat = "count", position = position_stack(vjust = 0.5))
+
+# Bar Plot of Average Time Took to Sleep by Day
+ggplot(SleepDay_4_5, aes(x = DayOfWeek, y = TotalTimeInBed - TotalMinutesAsleep, fill = DayOfWeek)) +
+  geom_bar(stat = "summary") +
+  scale_fill_manual(values = palette) +  
+  labs(title = "Average Time Took to Sleep by Day of the Week",
+       x = "Day of the Week",
+       y = "Average Time Took to Sleep (minutes)") +
+  scale_x_discrete(limits = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")) +
+  theme_minimal()  
+
+# Boxplot of Average Time Asleep by Day
+ggplot(SleepDay_4_5, aes(x = DayOfWeek, y = TotalMinutesAsleep)) +
+  geom_boxplot(fill = palette[2], color = "black") +  
+  labs(title = "Average Time Asleep by Day of the Week",
+       x = "Day of the Week",
+       y = "Average Time Asleep (minutes)") +
+  theme_minimal()  
+```
+
+Before we examine the average time took to sleep, we want to know the distribution of the sleep dataset to make sure it's fair. ![Ratio of distribution to sleep dataset](contribution_sleep.png)
+
+The sleep data is consider more equally splitted by each of the users, and we conclude it is a fair data.
+
+![*Average time took to sleep*](average_time_took_to_sleep.png)
+
+We can clearly see that the first 2 users are outliers from the dataset. We should not directly remove it from the data. Instead, we should find out the reason behind the recorded data. Firstly, we might want to conduct a consultation session to the user to understand whether they are having chronic insomnia disorder or not. If not, we might need to look into the system use collect the sleeping data, and fix it accordingly. Since this is a third party dataset, we assume that the first 2 users are really undergoing a chronic insomnia disorder.
+
+We've classified sleep patterns based on the Multiple Sleep Latency Test (MSLT) results:
+
+1.  **Healthy Sleepers**: Consistently fall asleep \< 20 minutes.
+
+2.  **Prone to Sleep Disorders**: Take 20 - 50 minutes to fall asleep during at least one nap.
+
+3.  **Potential Insomnia**: Consistently fall asleep \> 50 minutes.
+
+![*Distribution of Sleep Patterns*](sleep_pie.png)
+
+Based on the pie chart, we found out that:
+
+1.  **Prone to Sleep Disorders (54%)**: The largest segment, representing more than half of the sample, indicates a significant portion of individuals experiencing or at risk of sleep disorders.
+
+2.  **Healthy Sleepers (33%)**: About one-third of the sample enjoys healthy sleep patterns, suggesting a relatively smaller but still substantial group maintaining good sleep hygiene.
+
+More than half of the FitBit's users are experiencing insomnia, this posed a potential opportunities for Bellabeat to bring out new products to tackle this problem. For instance, Bellabeat could release sleep quality tracker that included with guided meditation lessons.
+
+![*Average time to fall asleep*](sleep_bar.png)
+
+Based on the bar chart, we found out that:
+
+1.  **Sunday (50 minutes)**: The highest average time to fall asleep occurs on Sunday, suggesting possible anxiety for the upcoming week.
+
+2.  **Monday - Saturday (35-40 minutes)**: During the workweek, the time it takes to fall asleep remains relatively stable, ranging from around 35 to 40 minutes.
+
+We found out that FitBit's users might feel anxious to deal with upcoming week. To tackle this issue, Bellabeat could introduce a new features in their device to increase user-experience, such as guided wind-down routine specifically designed for Sunday nights.
+
+![*Average time asleep*](sleep_boxplot.png)
+
+Based on the boxplot, we found that:
+
+**Saturday & Sunday**:
+
+-   Median sleep duration is relatively high, indicating variability in sleep duration.
+
+-   The IQR is broader, indicating higher fluctuation in sleep duration.
+
+**Monday - Friday**:
+
+-   Median sleep duration tends to be lower and more consistent compared to the weekends.
+
+-   The IQR is narrower, indicating higher consistency in sleep duration.
+
+There are several causes that might lead to high sleep duration fluctuation on weekend, here's some possible causes:
+
+1.  **Reduced Obligations**: With fewer work or school commitments, people may have more flexibility in their sleep schedules.
+
+2.  **Sleep Debt**: Trying to compensate for weekday sleep deficits may result in longer sleep durations on weekends.
+
+By capturing these interesting information, Bellabeat could introduce and distribute engaging articles, videos, and webinars focused on consistent sleep schedules, the health impact of sleep, managing weekend activities, and creating sleep-friendly environments. This could improve user sleep habits, increase engagement, and strengthen brand loyalty.
+
+```{r export csv}
+# Export each data frame to a separate CSV file
+write.csv(SleepDay_4_5, "SleepDay_4_5.csv", row.names = FALSE)
+write.csv(average_time_took_to_sleep, "average_time_took_to_sleep.csv", row.names = FALSE)
+write.csv(Heartrate_seconds_3_5, "Heartrate.csv", row.names = FALSE)
+```
+
+------------------------------------------------------------------------
+
+## Key Takeaways for Bellabeat's Analysis
+
+#### Activity Segmentation (Distance and Minutes)
+
+1.  **Daily Steps and Activity Levels:**
+
+    -   Most users average 7281 steps daily.
+
+    -   Majority of recorded distance comes from light activities like walking, not vigorous exercises.
+
+    -   Sedentary minutes are significantly high, indicating users spend a lot of time inactive.
+
+2.  **Actionable Insights:**
+
+    -   Introduce features such as reminders to stand or walk to reduce sedentary time.
+
+    -   Promote activities that encourage users to increase their active minutes.
+
+#### Heart Rate Analysis
+
+1.  **Heart Rate Patterns:**
+
+    -   Lowest heart rates occur during midnight due to restful sleep.
+
+    -   Highest heart rates are observed between 3.30pm - 7.00pm, likely due to post-work physical activities.
+
+2.  **Actionable Insights:**
+
+    -   Develop anomaly detection features to alert users of abnormal heart rates.
+
+    -   Encourage users to engage in consistent physical activities during peak hours.
+
+#### Weight and BMI Insights
+
+1.  **BMI Analysis:**
+
+    -   Average BMI of users is 25.37, indicating an overweight status.
+
+    -   Data shows high variability due to self-reported weights and dominance by a few users.
+
+2.  **Actionable Insights:**
+
+    -   Target marketing towards weight management and fitness programs.
+
+    -   Verify and improve the reliability of self-reported data to overcome the weakness of FitBit.
+
+#### Sleep Patterns
+
+1.  **Average Sleep Duration:**
+
+    -   Users sleep an average of 7 hours daily.
+
+2.  **Time to Fall Asleep:**
+
+    -   Users take longer to fall asleep on Sundays, indicating potential anxiety for the upcoming week.
+
+3.  **Sleep Duration Variability:**
+
+    -   High variability in sleep duration on weekends compared to weekdays.
+
+4.  **User Classification:**
+
+    -   **Healthy Sleepers (33%):** Fall asleep in less than 20 minutes.
+
+    -   **Prone to Sleep Disorders (54%):** Take 20-50 minutes to fall asleep.
+
+    -   **Potential Insomnia (13%):** Take more than 50 minutes to fall asleep.
+
+#### Actionable Insights
+
+1.  **Develop Sleep Quality Trackers:**
+
+    -   Incorporate features like guided meditation to help users fall asleep faster and improve overall sleep quality.
+
+2.  **Educational Content:**
+
+    -   Provide resources to educate users on maintaining consistent sleep schedules, especially focusing on managing weekend sleep patterns.
+
+    -   Include tips and articles on reducing anxiety before the upcoming week to address the longer sleep onset time on Sundays.
+
+3.  **Targeted Interventions:**
+
+    -   For **Healthy Sleepers (33%)**, emphasize maintaining their good sleep habits.
+
+    -   For users **Prone to Sleep Disorders (54%)**, offer personalized recommendations and tools to improve sleep quality, such as relaxation techniques.
+
+    -   For those with **Potential Insomnia (13%)**, suggest professional consultations and advanced sleep tracking features to monitor and improve their sleep health.
+
+#### Next Steps for Stakeholders
+
+1.  **Product Development:**
+
+    -   Enhance current fitness watch features with activity reminders, heart rate anomaly detection, and advanced sleep tracking with guided meditation.
+
+    -   Develop new product lines such as aromatic devices to avoid direct competition to FitBit (or equivalent competitor), while capture the available market of insomnia patients.
+
+2.  **Marketing Strategies:**
+
+    -   Launch targeted campaigns focusing on weight management and fitness, leveraging the insights on user BMI and activity patterns.
+
+    -   Promote educational content about consistent sleep schedules and reducing anxiety before the upcoming week.
+
+3.  **Data Quality Improvement:**
+
+    -   Implement methods to improve the reliability of self-reported data, such as prompting users for regular updates and validations.
+
+4.  **User Engagement:**
+
+    -   Provide personalized recommendations and tools based on user classification (e.g., Healthy Sleepers, Prone to Sleep Disorders, Potential Insomnia).
+
+#### Final Conclusion Based on Analysis
+
+Our analysis of Bellabeat's user data has revealed key patterns in user activity, heart rate, weight/BMI, and sleep behavior. The findings highlight areas where Bellabeat can enhance its product offerings and provide targeted interventions to improve user health and engagement.
+
+------------------------------------------------------------------------
+
+**Contact Information:** Lai Jien Weng\
+Email: reallyhat\@gmail.com\
+Phone: +60 16-385 9710
+
+Thank you for choosing me to analyze and provide insights for Bellabeat.
