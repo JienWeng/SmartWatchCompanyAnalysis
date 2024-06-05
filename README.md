@@ -1,92 +1,109 @@
+# Bellabeat Analysis Report
+
 ## How Can a Wellness Technology Company Play It Smart?
+**Date:** May 28, 2024  
+**Author:** Lai Jien Weng  
+**Contact Information:**  
+**Email:** reallyhat@gmail.com  
+**Phone:** +60 16-385 9710
 
 ## Overview
-Bellabeat, a high-tech manufacturer of products for women, is a successful small company, but they have the potential to become a global smart device market leader. Urška Sršen, co-founder and Chief Creative Officer of Bellabeat, believes that analyzing smart device fitness data could help unlock new growth opportunities for the company. This report aims to uncover insights into how consumers are using their smart devices by analyzing Bellabeat’s available data.
+![](img/logo.webp)
+Bellabeat, a high-tech manufacturer of products for women, is a successful small company with the potential to become a global player in the smart device market. Urška Sršen, co-founder and Chief Creative Officer of Bellabeat, believes that analyzing smart device fitness data could help unlock new growth opportunities for the company. This report aims to derive insights on how consumers are using their smart devices by analyzing available data from Bellabeat.
 
 ## Problem Statements
-1. What are the sleeping patterns of FitBit’s users?
-2. How are FitBit’s users’ sleeping quality distributed?
-3. How are FitBit’s users’ heart rate distributed?
+1. What are the sleeping patterns of FitBit users?
+2. How is the quality of FitBit users' sleep distributed?
+3. How is FitBit users' heart rate distributed?
 
 ## Goals
-1. **Increase Bellabeat’s sales:** By analyzing the available data, we aim to discover trends and insights to develop targeted marketing strategies.
-2. **Explore growth opportunities:** Identify markets with high demand where Bellabeat could expand its product line.
+1. Increase Bellabeat’s sales by analyzing available data to discover trends and insights for targeted marketing strategies.
+2. Explore growth opportunities by identifying high-demand markets for potential expansion.
 
-## Specifications
-This section discusses the technical issues and specifications in detail.
+## Dataset
+- **FitBit Fitness Tracker Data**: This dataset, available on [Kaggle](https://www.kaggle.com/datasets/arashnic/fitbit), contains personal fitness tracker data from thirty FitBit users, including minute-level output for physical activity, heart rate, and sleep monitoring. The data was generated via Amazon Mechanical Turk between March 12, 2016, and May 12, 2016.
 
-### Dataset
-- **FitBit Fitness Tracker Data** (CC0: Public Domain, dataset made available through Mobius): This Kaggle data set contains personal fitness tracker data from thirty FitBit users. Data includes minute-level output for physical activity, heart rate, and sleep monitoring.
+## Data Preparation
+1. **Cleaning the Data**: 
+   - Checked for missing values and duplicates.
+   - Removed inconsistencies and ensured proper formatting for analysis.
 
-- **Data Collection Period:** 03.12.2016 - 05.12.2016 (2 months)
-
-### Data Preparation
-This phase discusses how we clean and prepare the raw data:
-1. Clean the raw dataset by checking for missing values and duplicated data.
-2. Remove any inconsistencies and ensure the data is formatted correctly for analysis.
+2. **Formatting**:
+   - Standardized the dataset to facilitate analysis.
+   - Ensured all data points were correctly labeled and categorized.
 
 ## Analysis and Insights
-This phase discusses how we will analyze the data to derive meaningful insights.
 
 ### Sleep Pattern Distribution
-- **Healthy Sleepers (33%):** Consistently fall asleep in less than 20 minutes. About one-third of the sample maintains good sleep hygiene.
-- **Prone to Sleep Disorders (54%):** Take 20 to 50 minutes to fall asleep, indicating a significant portion experiencing or at risk of sleep disorders.
-- **Potential Insomnia (13%):** Consistently take more than 50 minutes to fall asleep.
+![](img/sleep-pattern.png)
+We classified sleep patterns into three categories using the Multiple Sleep Latency Test (MSLT) results:
+- **Healthy Sleepers (33%)**: Fall asleep in less than 20 minutes.
+- **Prone to Sleep Disorders (54%)**: Take 20 to 50 minutes to fall asleep during at least one nap.
+- **Potential Insomnia (13%)**: Consistently take more than 50 minutes to fall asleep.
+
+**Insights**: 
+- The majority of users are prone to sleep disorders, indicating a significant market for sleep improvement solutions. Bellabeat could develop products focused on enhancing sleep quality, such as sleep trackers with guided meditation features.
 
 ### Average Time Asleep
-- **Saturday & Sunday:**
-  - Median sleep duration is relatively high with a broad interquartile range (IQR), showing higher fluctuation in sleep duration.
-- **Monday to Friday:**
-  - Median sleep duration tends to be lower and more consistent compared to weekends. The IQR is narrower, indicating higher consistency in sleep duration.
+![](img/time-asleep.jpg)
+- **Weekends (Saturday & Sunday)**:
+  - Higher median sleep duration with greater variability (broader interquartile range).
+- **Weekdays (Monday to Friday)**:
+  - Lower and more consistent median sleep duration.
+
+**Insights**:
+- Weekend sleep duration fluctuation is likely due to reduced obligations and compensation for weekday sleep deficits. Bellabeat can introduce educational content on maintaining consistent sleep schedules and the health impacts of sleep.
 
 ### Average Time to Fall Asleep
-- **Sunday (50 minutes):** The highest average time to fall asleep, suggesting possible anxiety about the upcoming week.
-- **Monday to Saturday (35-40 minutes):** Time to fall asleep remains relatively stable.
+![](img/time-took-to-fall-asleep.jpg)
+- **Sunday (50 minutes)**: Highest average time to fall asleep, suggesting anxiety about the upcoming week.
+- **Monday to Saturday (35-40 minutes)**: Stable time to fall asleep during the workweek.
+
+**Insights**:
+- Users may experience anxiety on Sundays. Bellabeat could introduce features like a guided wind-down routine specifically designed for Sunday nights to help users reduce anxiety and improve sleep onset.
 
 ### Heart Rate Analysis
-- **Midnight:** The average heart rate is low, indicating restful sleep.
-- **3:30 pm - 7:00 pm:** The average heart rate is high due to physical activities or exercise.
+![](img/heart-rate.jpg)
+- **Midnight**: Low average heart rate indicating restful sleep and high parasympathetic activity.
+- **3:30 pm - 7:00 pm**: High average heart rate due to physical activities or exercise.
 
-### Anomaly Detection in Heart Rate
-Unusually high heart rates during sleep or sudden spikes can signal stress or medical conditions, including potential cardiac events.
+**Anomaly Detection**: 
+- Unusually high heart rates during sleep or sudden spikes can indicate stress or medical conditions. Bellabeat could implement continuous heart rate monitoring and trigger alerts for abnormalities, with options to contact emergency services if necessary.
 
 ## Key Findings and Actionable Insights
 
 ### Sleep Patterns
-- **Key Findings:**
-  - Users can be classified into three groups: Healthy Sleepers (33%), Prone to Sleep Disorders (54%), and Potential Insomnia (13%).
+- **Healthy Sleepers (33%)**: Maintain good sleep habits.
+- **Prone to Sleep Disorders (54%)**: Require personalized recommendations and tools for sleep improvement.
+- **Potential Insomnia (13%)**: Suggest professional consultations and advanced sleep tracking features.
 
-- **Actionable Insights:**
-  - **Tailor Recommendations:**
-    - **Healthy Sleepers (33%):** Provide content to help maintain good sleep habits.
-    - **Prone to Sleep Disorders (54%):** Offer personalized recommendations such as relaxation techniques, sleep hygiene tips, and stress management strategies.
-    - **Potential Insomnia (13%):** Suggest professional consultations and provide advanced sleep tracking features.
-  - **Personalized Consultation:** Develop a service offering personalized consultations based on user sleep data, including virtual consultations with sleep experts.
+**Actionable Insights**:
+- Provide tailored content and recommendations to each user group.
+- Develop a service offering personalized consultations based on user sleep data.
 
 ### Time Asleep
-- **Key Findings:**
-  - Sleep duration is inconsistent, with higher variability on weekends.
+- **Key Findings**: Inconsistent sleep duration with higher variability on weekends.
 
-- **Actionable Insights:**
-  - **Introduce Aromatic Devices:** Develop products like aromatic diffusers with calming scents to improve sleep quality.
-  - **Promote Sleep Education Content:** Create and distribute educational content on maintaining consistent sleep schedules and the health benefits of quality sleep.
+**Actionable Insights**:
+- Introduce aromatic devices and promote sleep education content to improve sleep quality and consistency.
 
-### Time Took to Sleep
-- **Key Findings:**
-  - Users take longer to fall asleep on Sundays, indicating potential anxiety about the upcoming week.
+### Time to Fall Asleep
+- **Key Findings**: Longer time to fall asleep on Sundays due to anxiety.
 
-- **Actionable Insights:**
-  - **Introduce Guided Meditation Features:** Integrate guided meditation sessions to help users relax and fall asleep faster, addressing anxiety specifically related to the upcoming week.
+**Actionable Insights**:
+- Integrate guided meditation sessions into Bellabeat devices to help users relax and fall asleep faster, especially on Sundays.
 
 ### Heart Rate
-- **Key Findings:**
-  - Lowest heart rates are observed during midnight, indicating restful sleep. Highest heart rates are observed between 3:30 pm and 7:00 pm due to physical activities.
+- **Key Findings**: Lowest heart rates at midnight and highest in the afternoon/evening.
 
-- **Actionable Insights:**
-  - **Alert Users of Abnormal Heart Rates:** Develop features that monitor heart rate continuously and alert users to any anomalies.
-  - **Promote Consistent Physical Activity:** Encourage users to engage in regular physical activities through reminders and challenges, providing personalized exercise plans based on user activity data.
+**Actionable Insights**:
+- Develop features to monitor heart rate continuously and alert users to anomalies.
+- Encourage consistent physical activity through personalized exercise plans.
 
-## Contact Information
-**Author:** Lai Jien Weng  
-**Email:** reallyhat@gmail.com  
-**Phone:** +60 16-385 9710
+## Conclusion
+By leveraging these insights, Bellabeat can enhance their product offerings, improve user health and wellness, and establish a stronger presence in the smart device market. To see the detailed process behind the analysis, please refer to `Bellabeat.html`, which is generated from `Bellabeat.RMD`. Please download the dataset from [Kaggle](https://www.kaggle.com/datasets/arashnic/fitbit).
+
+
+## Data Source
+- [FitBit Fitness Tracker Data on Kaggle](https://www.kaggle.com/datasets/arashnic/fitbit)
+  
