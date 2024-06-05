@@ -100,6 +100,10 @@ We classified sleep patterns into three categories using the Multiple Sleep Late
 - Develop features to monitor heart rate continuously and alert users to anomalies.
 - Encourage consistent physical activity through personalized exercise plans.
 
+**Interactive Dashboars**:
+You can access the interactive dashboard by clicking the image below.
+[![Tableau Visualization](img/Dashboard.jpg)](https://public.tableau.com/views/BellabeatAnalysis_17171620473860/BellabeatAnalysis?:language=en-GB&:sid=&:display_count=n&:origin=viz_share_link)
+
 ## Conclusion
 By leveraging these insights, Bellabeat can enhance their product offerings, improve user health and wellness, and establish a stronger presence in the smart device market. To see the detailed process behind the analysis, please refer to `Bellabeat.html`, which is generated from `Bellabeat.RMD`. Please download the dataset from [Kaggle](https://www.kaggle.com/datasets/arashnic/fitbit).
 
